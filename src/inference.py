@@ -4,6 +4,7 @@ import torch
 import argparse
 from model import DeepPunctuation, DeepPunctuationCRF
 from config import *
+import time
 
 parser = argparse.ArgumentParser(description='Punctuation restoration inference on text file')
 parser.add_argument('--cuda', default=True, type=lambda x: (str(x).lower() == 'true'), help='use cuda if available')
@@ -30,6 +31,7 @@ model_save_path = args.weight_path
 
 # Model
 device = torch.device('cuda' if (args.cuda and torch.cuda.is_available()) else 'cpu')
+print("device", device)
 if args.use_crf:
     deep_punctuation = DeepPunctuationCRF(args.pretrained_model, freeze_bert=False, lstm_dim=args.lstm_dim)
 else:
@@ -38,7 +40,8 @@ deep_punctuation.to(device)
 
 
 def inference():
-    deep_punctuation.load_state_dict(torch.load(model_save_path))
+    start_time = time.time()
+    deep_punctuation.load_state_dict(torch.load(model_save_path, map_location = device))
     deep_punctuation.eval()
 
     with open(args.in_file, 'r', encoding='utf-8') as f:
@@ -97,6 +100,7 @@ def inference():
                 decode_idx += 1
     print('Punctuated text')
     print(result)
+    print(f"Inference time {time.time() - start_time:.3f}")
     with open(args.out_file, 'w', encoding='utf-8') as f:
         f.write(result)
 
